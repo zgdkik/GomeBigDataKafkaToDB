@@ -15,6 +15,15 @@ public class OracleAttr {
     public static String TABLE = "META-TABLE";
 
 
+    public static String SSO_ERROR_TABLE = "SSOUSER_OGG.GOME_USER";
+    public static String SSO_ERROR_COLUMN = "USER_ID";
+    public static String SSO_CORRECT_COLUMN = "ID";
+
+
+    public static String CHANGE_OWNER = "DBJG150";
+
+    public static int ORACLE_BATCH_NUM = 10;
+
     /**
      * 插入操作
      */

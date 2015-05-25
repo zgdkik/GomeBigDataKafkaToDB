@@ -8,7 +8,6 @@
  */
 package com.gome.bigdata.utils;
 
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
 
 import java.io.*;
@@ -100,16 +99,6 @@ public class StringUtil {
         return null;
     }
 
-    public static String toStr(byte[] value) throws UnsupportedEncodingException {
-        if (value == null)
-            return "-=-";
-        return new String(value, "utf-8");
-    }
 
-    public static byte[] toBytes(String str) {
-        if (str == null)
-            str = "";
-        return Bytes.toBytes(str);
-    }
 
 }

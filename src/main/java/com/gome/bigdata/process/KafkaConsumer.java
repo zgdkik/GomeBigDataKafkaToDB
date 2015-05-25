@@ -11,6 +11,7 @@ import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.MessageAndMetadata;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import java.util.*;
@@ -47,8 +48,8 @@ public class KafkaConsumer {
         props = new Properties();
         props.put("zookeeper.connect", zkQuorum);
 //        props.put("zookeeper.connectiontimeout.ms", "1000000");
-//        props.put("auto.offset.reset", "smallest");
-        props.put("auto.offset.reset", offsetReset);
+        props.put("auto.offset.reset", "smallest");
+//        props.put("auto.offset.reset", offsetReset);
 //        props.put("zookeeper.sync.time.ms", "200");
 //        props.put("auto.commit.interval.ms", "1000");
         props.put("group.id", group);
@@ -68,9 +69,14 @@ public class KafkaConsumer {
         while (it.hasNext()) {
             MessageAndMetadata<byte[], byte[]> item = it.next();
             String msg = new String(item.message());
-//            System.out.println("offset:" + item.offset());
+            System.out.println("offset:" + item.offset());
 //            System.out.println(Thread.currentThread().getId() + ": receive : " + msg);
             parseOpt(msg);
+            try {
+                Thread.sleep(1000l);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
     }
@@ -82,7 +88,7 @@ public class KafkaConsumer {
 
         if (this.queue.size() > (ConfAttr.BQ_BUFFER_SIZE * 0.9)) {
             try {
-                Thread.sleep(6000l);
+                Thread.sleep(2000l);
             } catch (InterruptedException e) {
                 log.warn("BQ capacity has over 90%...");
             }
@@ -90,7 +96,7 @@ public class KafkaConsumer {
 
         while (this.queue.remainingCapacity() <= optLists.size()) {
             try {
-                Thread.sleep(6000l);
+                Thread.sleep(2000l);
             } catch (InterruptedException e) {
                 log.warn("BQ does not have enough room to save operations!");
             }
@@ -98,19 +104,38 @@ public class KafkaConsumer {
 
         for (JSONObject opt : optLists) {
             String optType = opt.getString(OracleAttr.PERATEIONTYPE);
-            String optTable = opt.getString(OracleAttr.TABLE);
+
+            String optSql = null;
+            String optOwner = opt.getString(OracleAttr.OWNER);
+            if (optOwner != null || StringUtils.isNotEmpty(optOwner.trim())) {
+                optOwner = OracleAttr.CHANGE_OWNER;
+            }
+            StringBuilder optTableBuilder = new StringBuilder(optOwner);
+            String optTable = optTableBuilder.append(".").append(opt.getString(OracleAttr.TABLE).toUpperCase()).toString();
+            String optPK = opt.getString(OracleAttr.PRIMARYKEY);
+            JSONObject optFiledValue = opt.getJSONObject(OracleAttr.FILEDVALUE);
+            List<List> filedList = OracleParser.getFiledListHaveFilter(optFiledValue, optTable);
+            List<List> primarykeyList = OracleParser.getPrimaryKeyListHaveFilter(optFiledValue, optPK, optType, optTable);
             if (OracleAttr.UPDATE.equalsIgnoreCase(optType)) {
-                this.queue.add(OracleParser.jsonToUpdatePutJson(opt, mapping));
+                optSql = OracleParser.jsonToUpdateSql(filedList, primarykeyList, optTable);
             } else if (OracleAttr.INSERT.equalsIgnoreCase(optType)) {
-                this.queue.add(OracleParser.jsonToInsertPutJson(opt, mapping));
+                optSql = OracleParser.jsonToInsertSql(filedList, optTable);
             } else if (OracleAttr.DELETE.equalsIgnoreCase(optType)) {
-                this.queue.add(OracleParser.jsonToDeleteJson(opt, mapping));
+                optSql = OracleParser.jsonToDeleteSql(primarykeyList, optTable);
             } else if (OracleAttr.UPDATEPK.equalsIgnoreCase(optType)) {
                 //todo 更新PK
-                this.queue.add(OracleParser.jsonToUpdatePKPutJson(opt, mapping));
+                log.error("Ucaccepted operation: update PK\n" + opt.toJSONString());
+                continue;
             } else {
                 log.error("Unaccepted operation:\n" + opt.toJSONString());
+                continue;
             }
+
+            JSONObject optSqlJson = new JSONObject();
+            optSqlJson.put("opt", optType);
+            optSqlJson.put("table", optTable);
+            optSqlJson.put("sql", optSql);
+            this.queue.add(optSqlJson);
         }
 
     }

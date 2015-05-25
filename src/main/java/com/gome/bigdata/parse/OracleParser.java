@@ -4,20 +4,23 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.gome.bigdata.attr.OracleAttr;
-import com.gome.rt.chain.attr.HBaseAttr;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.HashSet;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by lujia on 2015/3/19.
  */
 public class OracleParser {
     private static Logger log = Logger.getLogger(OracleParser.class.getName());
+
+    public static final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
      * 把原始json解析成单行操作，按照顺序保存
@@ -124,13 +127,13 @@ public class OracleParser {
     public static String getHiveTableNameFromOpt(JSONObject opt) {
         StringBuffer tableName = new StringBuffer();
         String database = opt.getString("META-DATABASE");
-    if ("ATGSYSDB".equalsIgnoreCase(database)) {
-        tableName.append("ATGSYSDB2").append("_0_").append(opt.getString("META-OWNER")).append("_0_").append(opt.getString("META-TABLE"));
-    } else {
-        tableName.append(opt.getString("META-DATABASE")).append("_0_").append(opt.getString("META-OWNER")).append("_0_").append(opt.getString("META-TABLE"));
+        if ("ATGSYSDB".equalsIgnoreCase(database)) {
+            tableName.append("ATGSYSDB2").append("_0_").append(opt.getString("META-OWNER")).append("_0_").append(opt.getString("META-TABLE"));
+        } else {
+            tableName.append(opt.getString("META-DATABASE")).append("_0_").append(opt.getString("META-OWNER")).append("_0_").append(opt.getString("META-TABLE"));
+        }
+        return tableName.toString();
     }
-    return tableName.toString();
-}
 
     /**
      * 从操作的json中获取rowkey
@@ -197,107 +200,187 @@ public class OracleParser {
     }
 
 
-    /**
-     * 生成update操作的 sql json
-     *
-     * @param optJson
-     * @param mapping
-     * @return
-     */
-    public static String jsonToUpdatePutJson(JSONObject optJson, JSONObject mapping) {
-        JSONObject putJson = new JSONObject();
-        String hiveTableName = getHiveTableNameFromOpt(optJson);
-        putJson.put("table", hiveTableName);
-        putJson.put("opt", HBaseAttr.UPDATE);
-
-        JSONObject property = optJson.getJSONObject("META-FILEDVALUE");
-        if (property.containsKey("ID_before")) {
-            //todo 之后添加update
-            log.error(String.format("UPDATE ID, opt: %s", optJson.toJSONString()));
-            property.remove("ID_before");
-//            return null;
-        }
-
-        String family = HBaseAttr.FAMILY_NAME;
-        String rowKey = getRowKeyFromOpt(hiveTableName, mapping, property);
-        if (rowKey == null) {
-            return null;
-        }
-
-        Put put = new Put(Bytes.toBytes(rowKey));
-        String hbaseCol = "";
-        for (String key : property.keySet()) {
-            hbaseCol = mapping.getJSONObject(hiveTableName).getJSONObject("COLS").getString(key);
-            String val = property.getString(key);
-            if (val == null) {
-                continue;
+    public static List<List> getFiledListHaveFilter(JSONObject jsonObjectFiledValue, String table) {
+        List<List> list = new ArrayList<List>();
+        int i = 1;
+        for (String key : jsonObjectFiledValue.keySet()) {
+            String value = jsonObjectFiledValue.getString(key);
+            if (table.equals(OracleAttr.SSO_ERROR_TABLE) && key.equals(OracleAttr.SSO_ERROR_COLUMN)) {
+                key = OracleAttr.SSO_CORRECT_COLUMN;
             }
-            put.add(Bytes.toBytes(family), Bytes.toBytes(hbaseCol), Bytes.toBytes(val));
+            if (!key.endsWith("_BEFORE")) {
+                List listFiled = new ArrayList();
+                listFiled.add(i);
+                listFiled.add(new StringBuffer("\"").append(key.toUpperCase()).append("\"").toString());
+                if (StringUtils.isEmpty(value) || value.equals("null")) {
+                    listFiled.add(null);
+                } else {
+                    listFiled.add(value);
+                }
+                list.add(listFiled);
+                i++;
+            }
         }
-        putJson.put("put", put);
+        return list;
+    }
 
-        return putJson;
+    public static List<List> getPrimaryKeyListHaveFilter(JSONObject jsonObjectFiledValue,
+                                                         String primarykey, String opeate, String table) {
+        String[] primarykeyArray = primarykey.split(",");
+        List<List> list = new ArrayList<List>();
+        int i = 1;
+        for (String key : primarykeyArray) {
+            List listPrimarykey = new ArrayList();
+            String value = null;
+            if (opeate.equals("UPDATE_FIELDCOMP_PK")) {
+                value = jsonObjectFiledValue.get(key + "_BEFORE").toString();
+            } else {
+                value = jsonObjectFiledValue.get(key).toString();
+            }
+
+            listPrimarykey.add(i);
+            if (table.equals(OracleAttr.SSO_ERROR_TABLE) && key.equals(OracleAttr.SSO_ERROR_COLUMN)) {
+                listPrimarykey.add("\"" + OracleAttr.SSO_CORRECT_COLUMN.toUpperCase() + "\"");
+            } else {
+                listPrimarykey.add("\"" + key.toUpperCase() + "\"");
+            }
+            listPrimarykey.add(value);
+            list.add(listPrimarykey);
+            i++;
+        }
+        return list;
+    }
+
+    public static boolean isMatcher(String regex, String string) {
+        String result = "";
+        try {
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(string);
+            if (matcher.find()) {
+                result = matcher.group();
+            }
+        } catch (Exception e) {
+            log.error(e.getLocalizedMessage());
+        }
+        if (StringUtils.isEmpty(result)) {
+            return false;
+        }
+        return true;
+    }
+
+    public static String formatDate(String dateString) {
+        Date date = null;
+        try {
+            date = df.parse(dateString);
+        } catch (ParseException e) {
+            log.error(e.getLocalizedMessage());
+        }
+        return df.format(date);
+    }
+
+    public static String valueFormat(Object value) {
+        String formatValume = "";
+        if (value == null) {
+            formatValume = null;
+        } else if (isMatcher("^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$", value
+                .toString().trim())) {
+            formatValume = formatDate(value.toString().trim());
+            formatValume = "TO_DATE(" + "'" + formatValume + "'," + "'YYYY-MM-DD HH24:MI:SS')";
+
+        } else {
+            formatValume = "'" + value + "'";
+        }
+        return formatValume;
 
     }
 
+
     /**
-     * 生成 insert操作的 sql json
+     * 生成update操作的 sql
      *
-     * @param optJson
-     * @param mapping
-     * @return
+     * @param filedList      操作list
+     * @param primarykeyList 主键list
+     * @param tableName
+     * @return update sql
      */
-    public static JSONObject jsonToInsertPutJson(JSONObject optJson, JSONObject mapping) {
-        JSONObject putJson = new JSONObject();
-        String hiveTableName = getHiveTableNameFromOpt(optJson);
-        putJson.put("table", hiveTableName);
-        putJson.put("opt", HBaseAttr.INSERT);
+    public static String jsonToUpdateSql(List<List> filedList, List<List> primarykeyList, String tableName) {
 
-        JSONObject property = optJson.getJSONObject("META-FILEDVALUE");
-        String family = HBaseAttr.FAMILY_NAME;
-        String rowKey = getRowKeyFromOpt(hiveTableName, mapping, property);
-        if (rowKey == null) {
-            return null;
-        }
-
-        Put put = new Put(Bytes.toBytes(rowKey));
-        String hbaseCol = "";
-        for (String key : property.keySet()) {
-            hbaseCol = mapping.getJSONObject(hiveTableName).getJSONObject("COLS").getString(key);
-            String val = property.getString(key);
-            if (val == null) {
-                continue;
+        String sql = "";
+        String filedPart = "";
+        String primaryKeyPart = "";
+        for (int i = 0; i < filedList.size(); i++) {
+            List list = filedList.get(i);
+            String filed = list.get(1).toString();
+            String valueFormat = valueFormat(list.get(2));
+            if (filedList.size() != i + 1) {
+                filedPart = filedPart + filed + "=" + valueFormat + ",";
+            } else {
+                filedPart = filedPart + filed + "=" + valueFormat;
             }
-            put.add(Bytes.toBytes(family), Bytes.toBytes(hbaseCol), Bytes.toBytes(val));
         }
-        putJson.put("put", put);
 
-        return putJson;
+        for (int i = 0; i < primarykeyList.size(); i++) {
+            List list = primarykeyList.get(i);
+            String filed = list.get(1).toString();
+            String valueFormat = valueFormat(list.get(2));
+            if (primarykeyList.size() != i + 1) {
+                primaryKeyPart = primaryKeyPart + filed + "=" + valueFormat + " AND ";
+            } else {
+                primaryKeyPart = primaryKeyPart + filed + "=" + valueFormat + "";
+            }
+        }
+        sql = "UPDATE " + tableName + " SET " + filedPart + " WHERE " + primaryKeyPart;
+        return sql;
     }
 
     /**
-     * 生成delete操作的 sql json
+     * 生成 insert操作的 sql
      *
-     * @param optJson
+     * @param filedList 操作的数据list
+     * @param tableName
+     * @return insert sql
+     */
+    public static String jsonToInsertSql(List<List> filedList, String tableName) {
+        String sql = "";
+        String filedPart = "(";
+        String valePart = "(";
+        for (int i = 0; i < filedList.size(); i++) {
+            List list = filedList.get(i);
+            String filed = list.get(1).toString();
+            String valueFormat = valueFormat(list.get(2));
+            if (filedList.size() != i + 1) {
+                filedPart = filedPart + filed + ",";
+                valePart = valePart + valueFormat + ",";
+            } else {
+                filedPart = filedPart + filed + ")";
+                valePart = valePart + valueFormat + ")";
+            }
+        }
+        sql = "INSERT INTO " + tableName + filedPart + " VALUES" + valePart;
+        return sql;
+    }
+
+    /**
+     * 生成delete操作的 sql
+     *
+     * @param primarykeyList
+     * @param table
      * @return
      */
-    public static JSONObject jsonToDeleteJson(JSONObject optJson, JSONObject mapping) {
-        JSONObject deleteJson = new JSONObject();
-        String hiveTableName = getHiveTableNameFromOpt(optJson);
-        deleteJson.put("table", hiveTableName);
-        deleteJson.put("opt", HBaseAttr.DELETE);
+    public static String jsonToDeleteSql(List<List> primarykeyList, String table) {
 
-        JSONObject property = optJson.getJSONObject("META-FILEDVALUE");
-        String family = HBaseAttr.FAMILY_NAME;
-        String rowKey = getRowKeyFromOpt(hiveTableName, mapping, property);
-        if (rowKey == null) {
-            return null;
+        String sql = "";
+        String primaryKeyPart = "";
+        for (int i = 0; i < primarykeyList.size(); i++) {
+            List list = (List) primarykeyList.get(i);
+            if (primarykeyList.size() != i + 1) {
+                primaryKeyPart = primaryKeyPart + list.get(1) + "='" + list.get(2) + "' AND ";
+            } else {
+                primaryKeyPart = primaryKeyPart + list.get(1) + "='" + list.get(2) + "'";
+            }
         }
 
-        Delete delete = new Delete(Bytes.toBytes(rowKey));
-
-        deleteJson.put("delete", delete);
-
-        return deleteJson;
+        sql = " DELETE FROM " + table + " WHERE " + primaryKeyPart;
+        return sql;
     }
 }
