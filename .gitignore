@@ -1,4 +1,7 @@
 *.iml
+.idea/
+target/
+logs/
 
 # Windows image file caches
 Thumbs.db
