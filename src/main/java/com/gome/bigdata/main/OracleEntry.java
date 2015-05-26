@@ -1,8 +1,13 @@
 package com.gome.bigdata.main;
 
 import com.alibaba.fastjson.JSONObject;
+import com.gome.bigdata.attr.ConfAttr;
+import com.gome.bigdata.attr.OracleAttr;
+import com.gome.bigdata.monitor.OracleSqlBufferMonitor;
 import com.gome.bigdata.process.KafkaConsumer;
 import com.gome.bigdata.process.SaveToOracleExecutor;
+import com.gome.bigdata.utils.PropertiesUtil;
+import com.gome.bigdata.utils.StringUtil;
 import org.apache.log4j.Logger;
 
 import java.util.Vector;
@@ -24,6 +29,7 @@ public class OracleEntry {
     private static AtomicInteger saveToOracleFailureCount = new AtomicInteger(0);
 
     KafkaConsumer kafkaConsumer = null;
+    OracleSqlBufferMonitor bufferMonitor = null;
     private Vector<SaveToOracleExecutor> consumers = new Vector<SaveToOracleExecutor>();
 
     public static int getReceivedFromKafkaOptCount() {
@@ -51,8 +57,33 @@ public class OracleEntry {
     }
 
     public void initConfig() {
-        oracleSqlBuffer = new LinkedBlockingDeque<JSONObject>(10000);
+        log.info("--------------------Start init configuration----------------------");
+        ConfAttr.BQ_BUFFER_SIZE = Integer.parseInt(PropertiesUtil.getInstance().getProperty("blockingqueue_size"));
+
+        OracleAttr.SSO_ERROR_TABLE = PropertiesUtil.getInstance().getProperty("error_table");
+        OracleAttr.SSO_ERROR_COLUMN = PropertiesUtil.getInstance().getProperty("error_column");
+        OracleAttr.SSO_CORRECT_COLUMN = PropertiesUtil.getInstance().getProperty("correct_column");
+
+        String changeOwner = PropertiesUtil.getInstance().getProperty("change_owner");
+        if (changeOwner == null || StringUtil.isEmpty(changeOwner, true)) {
+            OracleAttr.CHANGE_OWNER = null;
+        } else {
+            OracleAttr.CHANGE_OWNER = changeOwner;
+        }
+
+        OracleAttr.ORACLE_BATCH_NUM = Integer.parseInt(PropertiesUtil.getInstance().getProperty("toOracle_batch_size"));
+
     }
+
+    public void intOracleEntry() {
+        this.oracleSqlBuffer = new LinkedBlockingDeque<JSONObject>(ConfAttr.BQ_BUFFER_SIZE);
+    }
+
+    public void startBufferMonitor(int time) {
+        this.bufferMonitor = new OracleSqlBufferMonitor(oracleSqlBuffer);
+        this.bufferMonitor.start(5, time);
+    }
+
 
     public void startKafkaConsumer(String offsetReset, String zkQuorum, String group, String topic, int numThread) {
         this.kafkaConsumer = new KafkaConsumer(this.oracleSqlBuffer);
@@ -61,7 +92,7 @@ public class OracleEntry {
 
     }
 
-    public void startSaveToOracleExecutor(int n){
+    public void startSaveToOracleExecutor(int n) {
         for (int i = 0; i < n; i++) {
             log.info("--------Start SaveToOracleExecutor-------");
             SaveToOracleExecutor oracleExecutor = new SaveToOracleExecutor(this.oracleSqlBuffer);
@@ -72,4 +103,20 @@ public class OracleEntry {
     }
 
 
+    /**
+     * 程序退出时调用
+     */
+    public void stop() {
+        log.info("--------------------Start Stopping Oracle Entry--------------------");
+        this.kafkaConsumer.stop();
+        log.info("------Kafka Consumer stopped-------------");
+        while (this.oracleSqlBuffer.size() != 0) {
+            // 等buffer中的数据全部取完
+        }
+        log.info("------Hbase Put Buffer is empty-------------");
+        for (SaveToOracleExecutor executor : consumers) {
+            executor.stop();
+        }
+
+    }
 }

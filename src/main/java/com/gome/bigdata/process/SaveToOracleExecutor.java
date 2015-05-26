@@ -39,17 +39,14 @@ public class SaveToOracleExecutor implements Runnable {
     }
 
 
-
+    List<String> preSqlList = new ArrayList<String>();
 
     @Override
     public void run() {
-        System.out.println("111111111111111111111111");
-        int preSubmitCount = 0;
-        List<String> preSqlList = new ArrayList<String>();
+        Connection conn = null;
+        String sql = "";
         try {
-            System.out.println("22222222222222222222");
-            Connection conn = C3P0Factory.getConnection();
-            System.out.println("333333333333333333333");
+            conn = C3P0Factory.getConnection();
             conn.setAutoCommit(false);
             Statement stmt = conn.createStatement();
 
@@ -61,35 +58,95 @@ public class SaveToOracleExecutor implements Runnable {
                     stmt = conn.createStatement();
                 }
 
-                String sql = "";
                 try {
                     sql = queue.take().getString("sql");
                 } catch (InterruptedException e) {
                     e.printStackTrace();
-                    log.error("Taking out sql error");
+                    log.error("Taking out sql error: " + e.getMessage());
                 }
-                stmt.execute(sql);
+                try {
+                    stmt.execute(sql);
+                }catch (SQLException e){
+                    log.error("Oracle ERROR! ERROR SQL: " + sql);
+                    remedyCommit();
+                    preSqlList.clear();
+                    continue;
+                }
+
                 preSqlList.add(sql);
-                preSubmitCount++;
-                if (preSubmitCount >= OracleAttr.ORACLE_BATCH_NUM) {
+                if (preSqlList.size() >= OracleAttr.ORACLE_BATCH_NUM) {
                     try {
                         conn.commit();
-                        OracleEntry.incrSaveToOracleSuccessCount(preSubmitCount);
-                    } catch (Exception e) {
+                        OracleEntry.incrSaveToOracleSuccessCount(preSqlList.size());
+
+                    } catch (SQLException e) {
                         e.printStackTrace();
                         log.error("Batch submit error!");
-                        //todo 调用一个一个commit preSqlList
+                        remedyCommit();
                     } finally {
-                        preSubmitCount = 0;
-                        conn.close();
+                        preSqlList.clear();
                     }
                 }
             }
         } catch (SQLException e) {
-            log.error("Oracle ERROR!");
-            e.printStackTrace();
-
+            log.error("EXECUTE SQL ERROR: " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    log.error("Finally close connection!");
+                    e.printStackTrace();
+                }
+            }
         }
 
+    }
+
+    /**
+     * 停止程序时调用
+     */
+    public void stop() {
+        run.set(false);
+        while (preSqlList.size() > 0) {
+            log.info("-----Batch put map-----" + preSqlList.size());
+            for (int i = 0; i < preSqlList.size(); i++) {
+                singleCommit(preSqlList.get(i));
+            }
+        }
+        while (this.queue.size() > 0) {
+            try {
+                String sql = this.queue.take().getString("sql");
+                singleCommit(sql);
+            } catch (InterruptedException e) {
+                log.error("Get sql from quere error! " + this.queue.size() + "\n" + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 提交单个sql
+     * @param sql
+     */
+    private void singleCommit(String sql) {
+        try {
+            Connection conn = C3P0Factory.getConnection();
+            conn.setAutoCommit(false);
+            Statement stmt = conn.createStatement();
+            stmt.execute(sql);
+            conn.commit();
+            conn.close();
+        } catch (SQLException e) {
+            log.error("EXECUTE ERROR SQL: " + sql + "\n" + e.getMessage());
+        }
+    }
+
+    /**
+     * 批量提交sql时 出现异常就调用
+     */
+    private void remedyCommit() {
+        for (int i = 0; i < preSqlList.size(); i++) {
+            singleCommit(preSqlList.get(i));
+        }
     }
 }

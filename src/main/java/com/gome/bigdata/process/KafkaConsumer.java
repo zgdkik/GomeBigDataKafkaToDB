@@ -69,14 +69,14 @@ public class KafkaConsumer {
         while (it.hasNext()) {
             MessageAndMetadata<byte[], byte[]> item = it.next();
             String msg = new String(item.message());
-            System.out.println("offset:" + item.offset());
+//            System.out.println("offset:" + item.offset());
 //            System.out.println(Thread.currentThread().getId() + ": receive : " + msg);
             parseOpt(msg);
-            try {
-                Thread.sleep(1000l);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                Thread.sleep(1000l);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
         }
 
     }
@@ -86,17 +86,17 @@ public class KafkaConsumer {
         OracleEntry.incrReceivedFromKafkaOptCount(optLists.size());
 
 
-        if (this.queue.size() > (ConfAttr.BQ_BUFFER_SIZE * 0.9)) {
-            try {
-                Thread.sleep(2000l);
-            } catch (InterruptedException e) {
-                log.warn("BQ capacity has over 90%...");
-            }
-        }
-
+//        if (this.queue.size() > (ConfAttr.BQ_BUFFER_SIZE * 0.9)) {
+//            try {
+//                Thread.sleep(2000l);
+//            } catch (InterruptedException e) {
+//                log.warn("BQ capacity has over 90%...");
+//            }
+//        }
+//
         while (this.queue.remainingCapacity() <= optLists.size()) {
             try {
-                Thread.sleep(2000l);
+                Thread.sleep(500l);
             } catch (InterruptedException e) {
                 log.warn("BQ does not have enough room to save operations!");
             }

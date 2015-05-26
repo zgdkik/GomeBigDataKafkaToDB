@@ -81,6 +81,9 @@ public class C3P0Factory {
     public static Connection getConnection() {
         Connection connection = null;
         try {
+            if(cpds==null){
+                getOracleComboPooledDataSource();
+            }
             System.out.println("bbbbbbbbbbbbbbbbbbbb");
             connection = cpds.getConnection();
             System.out.println("cccccccccccccccccccccccc");

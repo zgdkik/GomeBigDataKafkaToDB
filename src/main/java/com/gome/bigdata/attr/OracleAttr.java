@@ -14,16 +14,6 @@ public class OracleAttr {
     public static String PERATEIONTYPE = "META-PERATEIONTYPE";
     public static String TABLE = "META-TABLE";
 
-
-    public static String SSO_ERROR_TABLE = "SSOUSER_OGG.GOME_USER";
-    public static String SSO_ERROR_COLUMN = "USER_ID";
-    public static String SSO_CORRECT_COLUMN = "ID";
-
-
-    public static String CHANGE_OWNER = "DBJG150";
-
-    public static int ORACLE_BATCH_NUM = 10;
-
     /**
      * 插入操作
      */
@@ -40,4 +30,21 @@ public class OracleAttr {
      * delete操作
      */
     public static String DELETE = "DELETE";
+
+
+    //以下为可修改的常量
+    public static String SSO_ERROR_TABLE = "SSOUSER_OGG.GOME_USER";
+    public static String SSO_ERROR_COLUMN = "USER_ID";
+    public static String SSO_CORRECT_COLUMN = "ID";
+
+
+    /**
+     * 需要修改的Oracle Owner名
+     */
+    public static String CHANGE_OWNER = "BDJG150";
+
+    /**
+     * 一次commit到Oracle的条数
+     */
+    public static int ORACLE_BATCH_NUM = 1000;
 }

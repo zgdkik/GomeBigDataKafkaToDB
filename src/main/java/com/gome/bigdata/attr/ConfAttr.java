@@ -6,8 +6,10 @@ package com.gome.bigdata.attr;
 public class ConfAttr {
 
     /**
-     * 写入hbase前的BQ的大小
+     * 写入oracle前的BQ的大小
      */
-    public static int BQ_BUFFER_SIZE = 2000;
+    public static int BQ_BUFFER_SIZE = 200000;
+
+
 
 }

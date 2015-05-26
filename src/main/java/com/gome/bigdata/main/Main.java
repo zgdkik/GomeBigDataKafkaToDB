@@ -9,7 +9,8 @@ public class Main {
 
         OracleEntry oracleEntry = new OracleEntry();
         oracleEntry.initConfig();
-        oracleEntry.startSaveToOracleExecutor(1);
+        oracleEntry.startSaveToOracleExecutor(2);
+        oracleEntry.startBufferMonitor(10);
         oracleEntry.startKafkaConsumer("smallest", "S3SA048:2181,S3SA049:2181,S3SA050:2181","sso-pre-test1","sso_mysql_to_oracle_uat_v1",1);
 
 
