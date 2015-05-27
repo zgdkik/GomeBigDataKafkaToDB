@@ -66,10 +66,9 @@ public class SaveToOracleExecutor implements Runnable {
                 }
                 try {
                     stmt.execute(sql);
-                }catch (SQLException e){
+                } catch (SQLException e) {
                     log.error("Oracle ERROR! ERROR SQL: " + sql);
                     remedyCommit();
-                    preSqlList.clear();
                     continue;
                 }
 
@@ -78,13 +77,11 @@ public class SaveToOracleExecutor implements Runnable {
                     try {
                         conn.commit();
                         OracleEntry.incrSaveToOracleSuccessCount(preSqlList.size());
-
+                        preSqlList.clear();
                     } catch (SQLException e) {
                         e.printStackTrace();
                         log.error("Batch submit error!");
                         remedyCommit();
-                    } finally {
-                        preSqlList.clear();
                     }
                 }
             }
@@ -94,6 +91,7 @@ public class SaveToOracleExecutor implements Runnable {
             if (conn != null) {
                 try {
                     conn.close();
+                    log.info("main connection closed...");
                 } catch (SQLException e) {
                     log.error("Finally close connection!");
                     e.printStackTrace();
@@ -109,8 +107,9 @@ public class SaveToOracleExecutor implements Runnable {
     public void stop() {
         run.set(false);
         while (preSqlList.size() > 0) {
-            log.info("-----Batch put map-----" + preSqlList.size());
+            log.info("-----Batch sql list-----" + preSqlList.size());
             for (int i = 0; i < preSqlList.size(); i++) {
+                log.info("single sql: " + i + " - " + preSqlList.get(i));
                 singleCommit(preSqlList.get(i));
             }
         }
@@ -126,17 +125,28 @@ public class SaveToOracleExecutor implements Runnable {
 
     /**
      * 提交单个sql
+     *
      * @param sql
      */
     private void singleCommit(String sql) {
         try {
+            log.info("1111111111111111111111");
             Connection conn = C3P0Factory.getConnection();
+            log.info("3333333333333333333333333333");
             conn.setAutoCommit(false);
+            log.info("4444444444444444444444");
             Statement stmt = conn.createStatement();
+            log.info("55555555555555555555555555555");
             stmt.execute(sql);
+            log.info("6666666666666666666666666666");
             conn.commit();
+            log.info("777777777777777777777777");
             conn.close();
+            log.info("88888888888888888888888888888888");
+            OracleEntry.incrSaveToOracleSuccessCount(1);
+            log.info("222222222222222222222");
         } catch (SQLException e) {
+            OracleEntry.incrSaveToOracleFailureCount(1);
             log.error("EXECUTE ERROR SQL: " + sql + "\n" + e.getMessage());
         }
     }
@@ -148,5 +158,6 @@ public class SaveToOracleExecutor implements Runnable {
         for (int i = 0; i < preSqlList.size(); i++) {
             singleCommit(preSqlList.get(i));
         }
+        preSqlList.clear();
     }
 }

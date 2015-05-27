@@ -1,9 +1,13 @@
 package com.gome.bigdata.monitor;
 
 import com.alibaba.fastjson.JSONObject;
+import com.gome.bigdata.attr.ConfAttr;
 import com.gome.bigdata.main.OracleEntry;
 import org.apache.log4j.Logger;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -26,9 +30,23 @@ public class OracleSqlBufferMonitor extends TimerTask {
     @Override
     public void run() {
         Date time = new Date();
-        String countline = String.format(
-                "%s -This hour,Received count: %d, Saved count: %d; Buffer Size: %d  \n\n", time.toString(), OracleEntry.getReceivedFromKafkaOptCount(), OracleEntry.getSaveToOracleSuccessCount(), oracleSqlBuffer.size());
-        System.out.println(countline);
+//        String countline = String.format(
+//                "%s -This hour,Received count: %d, Saved count: %d; Buffer Size: %d  \n\n", time.toString(), OracleEntry.getReceivedFromKafkaOptCount(), OracleEntry.getSaveToOracleSuccessCount(), oracleSqlBuffer.size());
+//        System.out.println(countline);
+
+        FileWriter fw;
+        try {
+            fw = new FileWriter(ConfAttr.BUFFER_MONITOR_FILE, true);
+            BufferedWriter bufferWritter = new BufferedWriter(fw);
+            String countline = String.format(
+                    "%s -This hour,Received count: %d, Saved success count: %d, Saved failure count: %d,  Buffer Size: %d  \n\n", time.toString(), OracleEntry.getReceivedFromKafkaOptCount(), OracleEntry.getSaveToOracleSuccessCount(), OracleEntry.getSaveToOracleFailureCount(), oracleSqlBuffer.size());
+            bufferWritter.write(countline);
+            bufferWritter.close();
+            fw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            log.warn("BufferMonitorTimer : Save buffer monitor ERROR!");
+        }
 
     }
 

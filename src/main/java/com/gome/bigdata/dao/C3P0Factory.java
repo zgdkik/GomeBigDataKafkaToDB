@@ -7,8 +7,10 @@ import java.sql.Connection;
 import com.gome.bigdata.utils.PropertiesUtil;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
+import org.apache.log4j.Logger;
 
 public class C3P0Factory {
+    private static Logger log = Logger.getLogger(C3P0Factory.class.getName());
 
     private static ComboPooledDataSource cpds = null;
 
@@ -81,12 +83,15 @@ public class C3P0Factory {
     public static Connection getConnection() {
         Connection connection = null;
         try {
-            if(cpds==null){
+            log.info("qqqqqqqqqqqqqqqq");
+            if (cpds == null) {
+                log.info("wwwwwwwwwwwwwwww");
                 getOracleComboPooledDataSource();
+                log.info("eeeeeeeeeeeeeeeeeeeee");
             }
-            System.out.println("bbbbbbbbbbbbbbbbbbbb");
+            log.info("rrrrrrrrrrrrrrrrrrrrrr");
             connection = cpds.getConnection();
-            System.out.println("cccccccccccccccccccccccc");
+            log.info("ttttttttttttttttttttt");
         } catch (Exception e) {
             e.printStackTrace();
             return null;

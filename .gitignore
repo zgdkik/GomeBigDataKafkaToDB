@@ -2,6 +2,7 @@
 .idea/
 target/
 logs/
+*.log
 
 # Windows image file caches
 Thumbs.db

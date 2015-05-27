@@ -94,20 +94,20 @@ public class KafkaConsumer {
 //            }
 //        }
 //
-        while (this.queue.remainingCapacity() <= optLists.size()) {
-            try {
-                Thread.sleep(500l);
-            } catch (InterruptedException e) {
-                log.warn("BQ does not have enough room to save operations!");
-            }
-        }
+//        while (this.queue.remainingCapacity() <= optLists.size()) {
+//            try {
+//                Thread.sleep(500l);
+//            } catch (InterruptedException e) {
+//                log.warn("BQ does not have enough room to save operations!");
+//            }
+//        }
 
         for (JSONObject opt : optLists) {
             String optType = opt.getString(OracleAttr.PERATEIONTYPE);
 
             String optSql = null;
             String optOwner = opt.getString(OracleAttr.OWNER);
-            if (optOwner != null || StringUtils.isNotEmpty(optOwner.trim())) {
+            if (OracleAttr.CHANGE_OWNER != null) {
                 optOwner = OracleAttr.CHANGE_OWNER;
             }
             StringBuilder optTableBuilder = new StringBuilder(optOwner);

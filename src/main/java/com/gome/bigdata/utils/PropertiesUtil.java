@@ -41,8 +41,8 @@ public class PropertiesUtil
     private static boolean autoSave = true;
 
     //TODO 写死在程序中的配置文件，配置文件
-    private final static String propertiesFile = "config.properties";
-//    private final static String propertiesFile = "conf/config.properties";
+//    private final static String propertiesFile = "config.properties";
+    private final static String propertiesFile = "conf/config.properties";
 
     /**
      * properties文件路径

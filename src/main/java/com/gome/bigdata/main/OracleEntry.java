@@ -4,11 +4,14 @@ import com.alibaba.fastjson.JSONObject;
 import com.gome.bigdata.attr.ConfAttr;
 import com.gome.bigdata.attr.OracleAttr;
 import com.gome.bigdata.monitor.OracleSqlBufferMonitor;
+import com.gome.bigdata.monitor.SaveHourCountTimer;
 import com.gome.bigdata.process.KafkaConsumer;
 import com.gome.bigdata.process.SaveToOracleExecutor;
+import com.gome.bigdata.utils.ParseUtil;
 import com.gome.bigdata.utils.PropertiesUtil;
 import com.gome.bigdata.utils.StringUtil;
 import org.apache.log4j.Logger;
+import scala.Int;
 
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
@@ -56,10 +59,26 @@ public class OracleEntry {
         return saveToOracleFailureCount.addAndGet(n);
     }
 
-    public void initConfig() {
-        log.info("--------------------Start init configuration----------------------");
-        ConfAttr.BQ_BUFFER_SIZE = Integer.parseInt(PropertiesUtil.getInstance().getProperty("blockingqueue_size"));
+    public static void resetReceivedFromKafkaOptCount() {
+        receivedFromKafkaOptCount.set(0);
+    }
 
+    public static void resetSaveToOracleSuccessCount() {
+        saveToOracleSuccessCount.set(0);
+    }
+
+    public static void resetSaveToOracleFailureCount() {
+        saveToOracleFailureCount.set(0);
+    }
+
+    public void initConfig() {
+        log.info("--------------------Start common init configuration----------------------");
+        ConfAttr.BQ_BUFFER_SIZE = Integer.parseInt(PropertiesUtil.getInstance().getProperty("blockingqueue_size"));
+        ConfAttr.BUFFER_MONITOR_FILE = PropertiesUtil.getInstance().getProperty("buffer_monitor_file");
+        ConfAttr.HOUR_RESET_COUNT_FILE = PropertiesUtil.getInstance().getProperty("count_hour_monitor_file");
+        ConfAttr.MEM_MONITOR_SECONDS = Integer.parseInt(PropertiesUtil.getInstance().getProperty("mem_monitor_seconds"));
+
+        log.info("-----------------Start Oracle init configuration------------------------");
         OracleAttr.SSO_ERROR_TABLE = PropertiesUtil.getInstance().getProperty("error_table");
         OracleAttr.SSO_ERROR_COLUMN = PropertiesUtil.getInstance().getProperty("error_column");
         OracleAttr.SSO_CORRECT_COLUMN = PropertiesUtil.getInstance().getProperty("correct_column");
@@ -72,27 +91,44 @@ public class OracleEntry {
         }
 
         OracleAttr.ORACLE_BATCH_NUM = Integer.parseInt(PropertiesUtil.getInstance().getProperty("toOracle_batch_size"));
+        OracleAttr.TO_ORACLE_THREAD_NUM = Integer.parseInt(PropertiesUtil.getInstance().getProperty("toOracle_thread"));
 
     }
 
-    public void intOracleEntry() {
+    /**
+     * 开始写入Oracle的进程及相关监控
+     */
+    public void startOracleEntry() {
         this.oracleSqlBuffer = new LinkedBlockingDeque<JSONObject>(ConfAttr.BQ_BUFFER_SIZE);
+        this.startHourCountMonitor();
+        this.startBufferMonitor(ConfAttr.MEM_MONITOR_SECONDS);
+        this.startSaveToOracleExecutor(OracleAttr.TO_ORACLE_THREAD_NUM);
     }
 
-    public void startBufferMonitor(int time) {
+    /**
+     * 启动内存监控现场
+     *
+     * @param seconds 多长时间打印一次内存监控，单位 s
+     */
+    private void startBufferMonitor(int seconds) {
         this.bufferMonitor = new OracleSqlBufferMonitor(oracleSqlBuffer);
-        this.bufferMonitor.start(5, time);
+        this.bufferMonitor.start(5, seconds);
     }
 
-
-    public void startKafkaConsumer(String offsetReset, String zkQuorum, String group, String topic, int numThread) {
-        this.kafkaConsumer = new KafkaConsumer(this.oracleSqlBuffer);
-        log.info("-------------------Kafka consumer starting-------------------");
-        kafkaConsumer.consume(offsetReset, zkQuorum, group, topic, numThread);
-
+    /**
+     * 启动每小时进行数据统计的 进程
+     */
+    private void startHourCountMonitor() {
+        long delay = ParseUtil.getFirstClockLong() - System.currentTimeMillis();
+        SaveHourCountTimer saveCount = new SaveHourCountTimer();
+        saveCount.start(delay, 3600);
     }
 
-    public void startSaveToOracleExecutor(int n) {
+    /**
+     * 启动从BQ到Oracle的进程
+     * @param n 启动的进程数，1个就可以
+     */
+    private void startSaveToOracleExecutor(int n) {
         for (int i = 0; i < n; i++) {
             log.info("--------Start SaveToOracleExecutor-------");
             SaveToOracleExecutor oracleExecutor = new SaveToOracleExecutor(this.oracleSqlBuffer);
@@ -102,6 +138,20 @@ public class OracleEntry {
         }
     }
 
+    /**
+     * 启动 kafka Consumer
+     * @param offsetReset kafka offset
+     * @param zkQuorum zookeeper地址
+     * @param group 消费groupid
+     * @param topic 消费的topic
+     * @param numThread 启动的进程数，1就行
+     */
+    public void startKafkaConsumer(String offsetReset, String zkQuorum, String group, String topic, int numThread) {
+        this.kafkaConsumer = new KafkaConsumer(this.oracleSqlBuffer);
+        log.info("-------------------Kafka consumer starting-------------------");
+        kafkaConsumer.consume(offsetReset, zkQuorum, group, topic, numThread);
+
+    }
 
     /**
      * 程序退出时调用
@@ -113,7 +163,7 @@ public class OracleEntry {
         while (this.oracleSqlBuffer.size() != 0) {
             // 等buffer中的数据全部取完
         }
-        log.info("------Hbase Put Buffer is empty-------------");
+        log.info("------Oracle Buffer is empty-------------");
         for (SaveToOracleExecutor executor : consumers) {
             executor.stop();
         }
