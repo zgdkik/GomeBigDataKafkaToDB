@@ -27,6 +27,7 @@ public class KafkaConsumer {
     private final BlockingQueue<JSONObject> queue;
     private ConsumerConnector connector = null;
     private Properties props = null;
+    private static boolean complete=false;
 
     public KafkaConsumer(BlockingQueue<JSONObject> queue) {
         this.queue = queue;
@@ -36,6 +37,7 @@ public class KafkaConsumer {
         log.info("--------Kafka Consumer stop---------");
         if (connector != null) {
             connector.shutdown();
+
             log.info("-------Kafka Consumer Connector shutdown-------");
         }
         if (props != null) {
@@ -78,6 +80,14 @@ public class KafkaConsumer {
 //                e.printStackTrace();
 //            }
         }
+//        while(true)
+//        {
+////                Thread.sleep(3000);
+//            if(complete == true)
+//            {
+//                break;
+//            }
+//        }
 
     }
 
@@ -101,6 +111,11 @@ public class KafkaConsumer {
 //                log.warn("BQ does not have enough room to save operations!");
 //            }
 //        }
+        if(OracleEntry.getReceivedFromKafkaOptCount()>=5000){
+            while (true){
+
+            }
+        }
 
         for (JSONObject opt : optLists) {
             String optType = opt.getString(OracleAttr.PERATEIONTYPE);

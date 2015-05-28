@@ -158,7 +158,7 @@ public class OracleEntry {
      */
     public void stop() {
         log.info("--------------------Start Stopping Oracle Entry--------------------");
-        this.kafkaConsumer.stop();
+//        this.kafkaConsumer.stop();
         log.info("------Kafka Consumer stopped-------------");
         while (this.oracleSqlBuffer.size() != 0) {
             // 等buffer中的数据全部取完
@@ -167,6 +167,7 @@ public class OracleEntry {
         for (SaveToOracleExecutor executor : consumers) {
             executor.stop();
         }
+//        kafkaConsumer.complete =true ;
 
     }
 }

@@ -63,6 +63,7 @@ public class SaveToOracleExecutor implements Runnable {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                     log.error("Taking out sql error: " + e.getMessage());
+
                 }
                 try {
                     stmt.execute(sql);
@@ -138,7 +139,8 @@ public class SaveToOracleExecutor implements Runnable {
             Statement stmt = conn.createStatement();
             log.info("55555555555555555555555555555");
             log.info(stmt.getClass());
-            stmt.execute(sql);
+//            stmt.execute(sql);
+            stmt.executeUpdate(sql);
             log.info("6666666666666666666666666666");
             conn.commit();
             log.info("777777777777777777777777");
