@@ -137,6 +137,7 @@ public class SaveToOracleExecutor implements Runnable {
             log.info("4444444444444444444444");
             Statement stmt = conn.createStatement();
             log.info("55555555555555555555555555555");
+            log.info(stmt.getClass());
             stmt.execute(sql);
             log.info("6666666666666666666666666666");
             conn.commit();
@@ -146,6 +147,7 @@ public class SaveToOracleExecutor implements Runnable {
             OracleEntry.incrSaveToOracleSuccessCount(1);
             log.info("222222222222222222222");
         } catch (SQLException e) {
+            log.info("ooooooooooooooooooooooooooooo");
             OracleEntry.incrSaveToOracleFailureCount(1);
             log.error("EXECUTE ERROR SQL: " + sql + "\n" + e.getMessage());
         }
