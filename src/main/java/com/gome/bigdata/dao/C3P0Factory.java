@@ -80,7 +80,7 @@ public class C3P0Factory {
         return cpds;
     }
 
-    public static Connection getConnection() {
+    public static synchronized Connection getConnection() {
         Connection connection = null;
         try {
             log.info("qqqqqqqqqqqqqqqq");

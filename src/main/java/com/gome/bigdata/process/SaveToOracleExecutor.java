@@ -24,18 +24,18 @@ public class SaveToOracleExecutor implements Runnable {
     private static Logger log = Logger.getLogger(SaveToOracleExecutor.class);
 
     private final BlockingQueue<JSONObject> queue;
-    private ComboPooledDataSource dataSource;
+//    private ComboPooledDataSource dataSource;
     private AtomicBoolean run = new AtomicBoolean(true);
 
     public SaveToOracleExecutor(BlockingQueue<JSONObject> queue) {
         this.queue = queue;
-        try {
-            dataSource = C3P0Factory.getOracleComboPooledDataSource();
-        } catch (Exception e) {
-            log.error("Data Source initial error: " + e.getMessage());
-            e.printStackTrace();
-            System.exit(0);
-        }
+//        try {
+//            dataSource = C3P0Factory.getOracleComboPooledDataSource();
+//        } catch (Exception e) {
+//            log.error("Data Source initial error: " + e.getMessage());
+//            e.printStackTrace();
+//            System.exit(0);
+//        }
     }
 
 

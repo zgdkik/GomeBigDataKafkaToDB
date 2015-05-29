@@ -4,9 +4,12 @@ import java.beans.PropertyVetoException;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import com.gome.bigdata.utils.PropertiesUtil;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
+import org.apache.log4j.Logger;
 
 public class ConnectionFactory {
+    private static Logger log = Logger.getLogger(ConnectionFactory.class.getName());
 
     private ConnectionFactory() {
     }
@@ -19,20 +22,21 @@ public class ConnectionFactory {
             // log.setLevel(Level.WARNING);
             ds = new ComboPooledDataSource();
             // 设置JDBC的Driver类
-            ds.setDriverClass("oracle.jdbc.OracleDriver");  // 参数由 Config 类根据配置文件读取
+            ds.setDriverClass(PropertiesUtil.getInstance().getProperty("odbc.driverClass"));  // 参数由 Config 类根据配置文件读取
             // 设置JDBC的URL
-            ds.setJdbcUrl("jdbc:oracle:thin:@10.58.46.150:31521:devbd");
+            ds.setJdbcUrl(PropertiesUtil.getInstance().getProperty("odbc.url"));
             // 设置数据库的登录用户名
-            ds.setUser("bdjg150");
+            ds.setUser(PropertiesUtil.getInstance().getProperty("odbc.username"));
             // 设置数据库的登录用户密码
-            ds.setPassword("7F5pDwfe3QPQZ2Aj");
+            ds.setPassword(PropertiesUtil.getInstance().getProperty("odbc.password"));
             // 设置连接池的最大连接数
-            ds.setMaxPoolSize(200);
+            ds.setMaxPoolSize(20);
             // 设置连接池的最小连接数
             ds.setMinPoolSize(20);
         } catch (PropertyVetoException e) {
             System.out.println("aaaaaaaa");
             e.printStackTrace();
+            log.error("C3P0 initial error: \n" + e.getMessage());
         }
     }
 
