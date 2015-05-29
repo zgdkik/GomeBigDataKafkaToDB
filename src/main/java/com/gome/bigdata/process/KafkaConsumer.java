@@ -113,7 +113,7 @@ public class KafkaConsumer {
 //        }
         if(OracleEntry.getReceivedFromKafkaOptCount()>=5000){
             while (true){
-
+                System.out.println("aaaaaaaaaa");
             }
         }
 
