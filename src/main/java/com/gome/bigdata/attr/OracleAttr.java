@@ -52,4 +52,9 @@ public class OracleAttr {
      * 写入Oracle的线程数
      */
     public static int TO_ORACLE_THREAD_NUM = 1;
+
+    /**
+     * 记录错误的sql 保存地址
+     */
+    public static String ERROR_SQL_PATH = "error_sql.log";
 }

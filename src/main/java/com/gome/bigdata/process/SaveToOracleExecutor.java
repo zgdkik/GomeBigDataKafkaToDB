@@ -5,6 +5,7 @@ import com.gome.bigdata.attr.OracleAttr;
 import com.gome.bigdata.dao.C3P0Factory;
 import com.gome.bigdata.dao.C3P0Utils;
 import com.gome.bigdata.main.OracleEntry;
+import com.gome.bigdata.utils.ParseUtil;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import org.apache.log4j.Logger;
 
@@ -12,6 +13,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,7 +26,7 @@ public class SaveToOracleExecutor implements Runnable {
     private static Logger log = Logger.getLogger(SaveToOracleExecutor.class);
 
     private final BlockingQueue<JSONObject> queue;
-//    private ComboPooledDataSource dataSource;
+    //    private ComboPooledDataSource dataSource;
     private AtomicBoolean run = new AtomicBoolean(true);
 
     public SaveToOracleExecutor(BlockingQueue<JSONObject> queue) {
@@ -63,13 +65,17 @@ public class SaveToOracleExecutor implements Runnable {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                     log.error("Taking out sql error: " + e.getMessage());
-
+                    ParseUtil.recordErrorSql(OracleAttr.ERROR_SQL_PATH, (new Date()).toString() + " - " + sql + System.lineSeparator());
+                    OracleEntry.incrSaveToOracleFailureCount(1);
+                    continue;
                 }
                 try {
                     stmt.execute(sql);
                 } catch (SQLException e) {
                     log.error("Oracle ERROR! ERROR SQL: " + sql);
-                    remedyCommit();
+//                    remedyCommit();
+                    ParseUtil.recordErrorSql(OracleAttr.ERROR_SQL_PATH, (new Date()).toString() + " - " + sql + System.lineSeparator());
+                    OracleEntry.incrSaveToOracleFailureCount(1);
                     continue;
                 }
 
@@ -82,7 +88,9 @@ public class SaveToOracleExecutor implements Runnable {
                     } catch (SQLException e) {
                         e.printStackTrace();
                         log.error("Batch submit error!");
-                        remedyCommit();
+//                        remedyCommit();
+                        ParseUtil.recordErrorSql(OracleAttr.ERROR_SQL_PATH, (new Date()).toString() + " - " + sql + System.lineSeparator());
+                        OracleEntry.incrSaveToOracleFailureCount(1);
                     }
                 }
             }
@@ -106,22 +114,28 @@ public class SaveToOracleExecutor implements Runnable {
      * 停止程序时调用
      */
     public void stop() {
-        run.set(false);
+
         while (preSqlList.size() > 0) {
-            log.info("-----Batch sql list-----" + preSqlList.size());
-            for (int i = 0; i < preSqlList.size(); i++) {
-                log.info("single sql: " + i + " - " + preSqlList.get(i));
-                singleCommit(preSqlList.get(i));
-            }
+
         }
-        while (this.queue.size() > 0) {
-            try {
-                String sql = this.queue.take().getString("sql");
-                singleCommit(sql);
-            } catch (InterruptedException e) {
-                log.error("Get sql from quere error! " + this.queue.size() + "\n" + e.getMessage());
-            }
-        }
+        log.info("-------------save to oracle executor stopped------------------");
+
+//        run.set(false);
+//        while (preSqlList.size() > 0) {
+//            log.info("------------Kafka sql list-----" + preSqlList.size());
+//            for (int i = 0; i < preSqlList.size(); i++) {
+//                log.info("single sql: " + i + " - " + preSqlList.get(i));
+//                singleCommit(preSqlList.get(i));
+//            }
+//        }
+//        while (this.queue.size() > 0) {
+//            try {
+//                String sql = this.queue.take().getString("sql");
+//                singleCommit(sql);
+//            } catch (InterruptedException e) {
+//                log.error("Get sql from quere error! " + this.queue.size() + "\n" + e.getMessage());
+//            }
+//        }
     }
 
     /**

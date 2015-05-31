@@ -11,7 +11,6 @@ import com.gome.bigdata.utils.ParseUtil;
 import com.gome.bigdata.utils.PropertiesUtil;
 import com.gome.bigdata.utils.StringUtil;
 import org.apache.log4j.Logger;
-import scala.Int;
 
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
@@ -92,6 +91,7 @@ public class OracleEntry {
 
         OracleAttr.ORACLE_BATCH_NUM = Integer.parseInt(PropertiesUtil.getInstance().getProperty("toOracle_batch_size"));
         OracleAttr.TO_ORACLE_THREAD_NUM = Integer.parseInt(PropertiesUtil.getInstance().getProperty("toOracle_thread"));
+        OracleAttr.ERROR_SQL_PATH = PropertiesUtil.getInstance().getProperty("error_sql_log");
 
     }
 
@@ -126,6 +126,7 @@ public class OracleEntry {
 
     /**
      * 启动从BQ到Oracle的进程
+     *
      * @param n 启动的进程数，1个就可以
      */
     private void startSaveToOracleExecutor(int n) {
@@ -140,11 +141,12 @@ public class OracleEntry {
 
     /**
      * 启动 kafka Consumer
+     *
      * @param offsetReset kafka offset
-     * @param zkQuorum zookeeper地址
-     * @param group 消费groupid
-     * @param topic 消费的topic
-     * @param numThread 启动的进程数，1就行
+     * @param zkQuorum    zookeeper地址
+     * @param group       消费groupid
+     * @param topic       消费的topic
+     * @param numThread   启动的进程数，1就行
      */
     public void startKafkaConsumer(String offsetReset, String zkQuorum, String group, String topic, int numThread) {
         this.kafkaConsumer = new KafkaConsumer(this.oracleSqlBuffer);
@@ -158,7 +160,7 @@ public class OracleEntry {
      */
     public void stop() {
         log.info("--------------------Start Stopping Oracle Entry--------------------");
-//        this.kafkaConsumer.stop();
+        this.kafkaConsumer.stop();
         log.info("------Kafka Consumer stopped-------------");
         while (this.oracleSqlBuffer.size() != 0) {
             // 等buffer中的数据全部取完
