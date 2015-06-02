@@ -58,31 +58,35 @@ public class SaveToOracleExecutor implements Runnable {
                     stmt = conn.createStatement();
                 }
 
-                try {
-                    sql = queue.take().getString("sql");
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    log.error("Taking out sql error: " + e.getMessage());
-
-                }
-                try {
-                    stmt.execute(sql);
-                } catch (SQLException e) {
-                    log.error("Oracle ERROR! ERROR SQL: " + sql);
-                    remedyCommit();
+                if(queue.remainingCapacity()<=0){
                     continue;
-                }
-
-                preSqlList.add(sql);
-                if (preSqlList.size() >= OracleAttr.ORACLE_BATCH_NUM) {
+                }else{
                     try {
-                        conn.commit();
-                        OracleEntry.incrSaveToOracleSuccessCount(preSqlList.size());
-                        preSqlList.clear();
-                    } catch (SQLException e) {
+                        sql = queue.take().getString("sql");
+                    } catch (InterruptedException e) {
                         e.printStackTrace();
-                        log.error("Batch submit error!");
+                        log.error("Taking out sql error: " + e.getMessage());
+
+                    }
+                    try {
+                        stmt.execute(sql);
+                    } catch (SQLException e) {
+                        log.error("Oracle ERROR! ERROR SQL: " + sql + "\n" + e.getMessage());
                         remedyCommit();
+                        continue;
+                    }
+
+                    preSqlList.add(sql);
+                    if (preSqlList.size() >= OracleAttr.ORACLE_BATCH_NUM) {
+                        try {
+                            conn.commit();
+                            OracleEntry.incrSaveToOracleSuccessCount(preSqlList.size());
+                            preSqlList.clear();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                            log.error("Batch submit error!");
+                            remedyCommit();
+                        }
                     }
                 }
             }
