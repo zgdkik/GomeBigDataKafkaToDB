@@ -58,21 +58,21 @@ public class SaveToOracleExecutor implements Runnable {
                     stmt = conn.createStatement();
                 }
 
-                if(queue.remainingCapacity()<=0){
+                if (queue.remainingCapacity() <= 0) {
                     continue;
-                }else{
+
+                } else {
                     try {
                         sql = queue.take().getString("sql");
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         log.error("Taking out sql error: " + e.getMessage());
-
                     }
                     try {
                         stmt.execute(sql);
                     } catch (SQLException e) {
                         log.error("Oracle ERROR! ERROR SQL: " + sql + "\n" + e.getMessage());
-                        remedyCommit();
+//                        remedyCommit();
                         continue;
                     }
 
@@ -85,7 +85,7 @@ public class SaveToOracleExecutor implements Runnable {
                         } catch (SQLException e) {
                             e.printStackTrace();
                             log.error("Batch submit error!");
-                            remedyCommit();
+//                            remedyCommit();
                         }
                     }
                 }
@@ -103,29 +103,31 @@ public class SaveToOracleExecutor implements Runnable {
                 }
             }
         }
-
     }
 
     /**
      * 停止程序时调用
      */
     public void stop() {
-        run.set(false);
-        while (preSqlList.size() > 0) {
-            log.info("-----Batch sql list-----" + preSqlList.size());
-            for (int i = 0; i < preSqlList.size(); i++) {
-                log.info("single sql: " + i + " - " + preSqlList.get(i));
-                singleCommit(preSqlList.get(i));
-            }
-        }
         while (this.queue.size() > 0) {
-            try {
-                String sql = this.queue.take().getString("sql");
-                singleCommit(sql);
-            } catch (InterruptedException e) {
-                log.error("Get sql from quere error! " + this.queue.size() + "\n" + e.getMessage());
-            }
+
         }
+        run.set(false);
+
+        log.info("-----Batch sql list-----" + preSqlList.size());
+        for (int i = 0; i < preSqlList.size(); i++) {
+            log.info("single sql: " + i + " - " + preSqlList.get(i));
+            singleCommit(preSqlList.get(i));
+        }
+        log.info("-------------save to oracle executor stopped------------------");
+//        while (this.queue.size() > 0) {
+//            try {
+//                String sql = this.queue.take().getString("sql");
+//                singleCommit(sql);
+//            } catch (InterruptedException e) {
+//                log.error("Get sql from quere error! " + this.queue.size() + "\n" + e.getMessage());
+//            }
+//        }
     }
 
     /**

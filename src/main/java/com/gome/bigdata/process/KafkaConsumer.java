@@ -27,7 +27,7 @@ public class KafkaConsumer {
     private final BlockingQueue<JSONObject> queue;
     private ConsumerConnector connector = null;
     private Properties props = null;
-    private static boolean complete=false;
+    private static boolean complete = false;
 
     public KafkaConsumer(BlockingQueue<JSONObject> queue) {
         this.queue = queue;
@@ -35,25 +35,24 @@ public class KafkaConsumer {
 
     public void stop() {
         log.info("--------Kafka Consumer stop---------");
-        if (connector != null) {
-            connector.shutdown();
-
-            log.info("-------Kafka Consumer Connector shutdown-------");
-        }
-        if (props != null) {
-            props = null;
-            log.info("-------Kafka Consumer Props set to null---------");
-        }
+//        if (connector != null) {
+//            connector.shutdown();
+//
+//            log.info("-------Kafka Consumer Connector shutdown-------");
+//        }
+//        if (props != null) {
+//            props = null;
+//            log.info("-------Kafka Consumer Props set to null---------");
+//        }
+        this.complete = true;
+        log.info("-----------Kafka Consumer stopped--------------------");
     }
 
     public void consume(String offsetReset, String zkQuorum, String group, String topic, int numThread) {
         props = new Properties();
         props.put("zookeeper.connect", zkQuorum);
-//        props.put("zookeeper.connectiontimeout.ms", "1000000");
-        props.put("auto.offset.reset", "smallest");
-//        props.put("auto.offset.reset", offsetReset);
-//        props.put("zookeeper.sync.time.ms", "200");
-//        props.put("auto.commit.interval.ms", "1000");
+//        props.put("auto.offset.reset", "smallest");
+        props.put("auto.offset.reset", offsetReset);
         props.put("group.id", group);
 
         ConsumerConfig consumerConfig = new ConsumerConfig(props);
@@ -74,46 +73,32 @@ public class KafkaConsumer {
 //            System.out.println("offset:" + item.offset());
 //            System.out.println(Thread.currentThread().getId() + ": receive : " + msg);
             parseOpt(msg);
-//            try {
-//                Thread.sleep(1000l);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
+
+            while (true) {
+                if (!complete) break;
+                try {
+                    Thread.sleep(3000l);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    log.error("------------Kafka stopped-----------\n" + e.getMessage());
+                }
+            }
         }
-//        while(true)
-//        {
-////                Thread.sleep(3000);
-//            if(complete == true)
-//            {
-//                break;
-//            }
-//        }
 
     }
 
     private void parseOpt(String batchOpt) {
         ArrayList<JSONObject> optLists = OracleParser.parseOperations(batchOpt);
         OracleEntry.incrReceivedFromKafkaOptCount(optLists.size());
+        System.out.println("Received count: " + OracleEntry.getReceivedFromKafkaOptCount());
+        log.info("Received count: " + OracleEntry.getReceivedFromKafkaOptCount());
 
 
-//        if (this.queue.size() > (ConfAttr.BQ_BUFFER_SIZE * 0.9)) {
-//            try {
-//                Thread.sleep(2000l);
-//            } catch (InterruptedException e) {
-//                log.warn("BQ capacity has over 90%...");
-//            }
-//        }
-//
-//        while (this.queue.remainingCapacity() <= optLists.size()) {
-//            try {
-//                Thread.sleep(500l);
-//            } catch (InterruptedException e) {
-//                log.warn("BQ does not have enough room to save operations!");
-//            }
-//        }
-        if(OracleEntry.getReceivedFromKafkaOptCount()>=5000){
-            while (true){
-
+        while (this.queue.remainingCapacity() <= optLists.size()) {
+            try {
+                Thread.sleep(100l);
+            } catch (InterruptedException e) {
+                log.warn("BQ does not have enough room to save operations!");
             }
         }
 
