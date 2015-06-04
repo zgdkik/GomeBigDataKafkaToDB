@@ -24,18 +24,10 @@ public class SaveToOracleExecutor implements Runnable {
     private static Logger log = Logger.getLogger(SaveToOracleExecutor.class);
 
     private final BlockingQueue<JSONObject> queue;
-    private ComboPooledDataSource dataSource;
     private AtomicBoolean run = new AtomicBoolean(true);
 
     public SaveToOracleExecutor(BlockingQueue<JSONObject> queue) {
         this.queue = queue;
-        try {
-            dataSource = C3P0Factory.getOracleComboPooledDataSource();
-        } catch (Exception e) {
-            log.error("Data Source initial error: " + e.getMessage());
-            e.printStackTrace();
-            System.exit(0);
-        }
     }
 
 
@@ -72,7 +64,9 @@ public class SaveToOracleExecutor implements Runnable {
                         stmt.execute(sql);
                     } catch (SQLException e) {
                         log.error("Oracle ERROR! ERROR SQL: " + sql + "\n" + e.getMessage());
-//                        remedyCommit();
+                        conn.close();
+                        conn = null;
+                        remedyCommit();
                         continue;
                     }
 
@@ -85,7 +79,9 @@ public class SaveToOracleExecutor implements Runnable {
                         } catch (SQLException e) {
                             e.printStackTrace();
                             log.error("Batch submit error!");
-//                            remedyCommit();
+                            conn.close();
+                            conn = null;
+                            remedyCommit();
                         }
                     }
                 }
@@ -120,14 +116,6 @@ public class SaveToOracleExecutor implements Runnable {
             singleCommit(preSqlList.get(i));
         }
         log.info("-------------save to oracle executor stopped------------------");
-//        while (this.queue.size() > 0) {
-//            try {
-//                String sql = this.queue.take().getString("sql");
-//                singleCommit(sql);
-//            } catch (InterruptedException e) {
-//                log.error("Get sql from quere error! " + this.queue.size() + "\n" + e.getMessage());
-//            }
-//        }
     }
 
     /**
@@ -137,25 +125,16 @@ public class SaveToOracleExecutor implements Runnable {
      */
     private void singleCommit(String sql) {
         try {
-            log.info("1111111111111111111111");
             Connection conn = C3P0Factory.getConnection();
-            log.info("3333333333333333333333333333");
             conn.setAutoCommit(false);
-            log.info("4444444444444444444444");
             Statement stmt = conn.createStatement();
-            log.info("55555555555555555555555555555");
             log.info(stmt.getClass());
 //            stmt.execute(sql);
             stmt.executeUpdate(sql);
-            log.info("6666666666666666666666666666");
             conn.commit();
-            log.info("777777777777777777777777");
             conn.close();
-            log.info("88888888888888888888888888888888");
             OracleEntry.incrSaveToOracleSuccessCount(1);
-            log.info("222222222222222222222");
         } catch (SQLException e) {
-            log.info("ooooooooooooooooooooooooooooo");
             OracleEntry.incrSaveToOracleFailureCount(1);
             log.error("EXECUTE ERROR SQL: " + sql + "\n" + e.getMessage());
         }
