@@ -124,6 +124,7 @@ public class SaveToOracleExecutor implements Runnable {
      * @param sql
      */
     private void singleCommit(String sql) {
+        log.info("Single commit! - " + sql);
         try {
             Connection conn = C3P0Factory.getConnection();
             conn.setAutoCommit(false);

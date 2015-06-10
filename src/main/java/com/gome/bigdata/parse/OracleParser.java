@@ -287,6 +287,8 @@ public class OracleParser {
             formatValume = formatDate(value.toString().trim());
             formatValume = "TO_DATE(" + "'" + formatValume + "'," + "'YYYY-MM-DD HH24:MI:SS')";
 
+        } else if (value.toString().contains("'")) {
+            formatValume = "'" + value.toString().replace("'", "''") + "'";
         } else {
             formatValume = "'" + value + "'";
         }
