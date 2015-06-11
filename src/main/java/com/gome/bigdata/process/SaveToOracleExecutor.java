@@ -136,6 +136,7 @@ public class SaveToOracleExecutor implements Runnable {
             conn.close();
             OracleEntry.incrSaveToOracleSuccessCount(1);
         } catch (SQLException e) {
+            log.error("Single commit ERROR! - " + sql);
             OracleEntry.incrSaveToOracleFailureCount(1);
             log.error("EXECUTE ERROR SQL: " + sql + "\n" + e.getMessage());
         }
@@ -145,6 +146,7 @@ public class SaveToOracleExecutor implements Runnable {
      * 批量提交sql时 出现异常就调用
      */
     private void remedyCommit() {
+        log.info("Remedy commit! preSqlList size: " + preSqlList.size());
         for (int i = 0; i < preSqlList.size(); i++) {
             singleCommit(preSqlList.get(i));
         }
