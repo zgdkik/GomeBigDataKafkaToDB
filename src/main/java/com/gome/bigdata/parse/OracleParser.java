@@ -235,6 +235,8 @@ public class OracleParser {
             if (opeate.equals("UPDATE_FIELDCOMP_PK")) {
                 value = jsonObjectFiledValue.get(key + "_BEFORE").toString();
             } else {
+//                log.info(jsonObjectFiledValue.toJSONString());
+//                log.info("Keys : " + primarykey + " , key :" + key);
                 value = jsonObjectFiledValue.get(key).toString();
             }
 

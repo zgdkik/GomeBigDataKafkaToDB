@@ -110,32 +110,38 @@ public class KafkaConsumer {
             if (OracleAttr.CHANGE_OWNER != null) {
                 optOwner = OracleAttr.CHANGE_OWNER;
             }
-            StringBuilder optTableBuilder = new StringBuilder(optOwner);
-            String optTable = optTableBuilder.append(".").append(opt.getString(OracleAttr.TABLE).toUpperCase()).toString();
-            String optPK = opt.getString(OracleAttr.PRIMARYKEY);
-            JSONObject optFiledValue = opt.getJSONObject(OracleAttr.FILEDVALUE);
-            List<List> filedList = OracleParser.getFiledListHaveFilter(optFiledValue, optTable);
-            List<List> primarykeyList = OracleParser.getPrimaryKeyListHaveFilter(optFiledValue, optPK, optType, optTable);
-            if (OracleAttr.UPDATE.equalsIgnoreCase(optType)) {
-                optSql = OracleParser.jsonToUpdateSql(filedList, primarykeyList, optTable);
-            } else if (OracleAttr.INSERT.equalsIgnoreCase(optType)) {
-                optSql = OracleParser.jsonToInsertSql(filedList, optTable);
-            } else if (OracleAttr.DELETE.equalsIgnoreCase(optType)) {
-                optSql = OracleParser.jsonToDeleteSql(primarykeyList, optTable);
-            } else if (OracleAttr.UPDATEPK.equalsIgnoreCase(optType)) {
-                //todo 更新PK
-                log.error("Ucaccepted operation: update PK\n" + opt.toJSONString());
-                continue;
-            } else {
-                log.error("Unaccepted operation:\n" + opt.toJSONString());
-                continue;
+            try {
+                StringBuilder optTableBuilder = new StringBuilder(optOwner);
+                String optTable = optTableBuilder.append(".").append(opt.getString(OracleAttr.TABLE).toUpperCase()).toString();
+                String optPK = opt.getString(OracleAttr.PRIMARYKEY);
+                JSONObject optFiledValue = opt.getJSONObject(OracleAttr.FILEDVALUE);
+                List<List> filedList = OracleParser.getFiledListHaveFilter(optFiledValue, optTable);
+                List<List> primarykeyList = OracleParser.getPrimaryKeyListHaveFilter(optFiledValue, optPK, optType, optTable);
+                if (OracleAttr.UPDATE.equalsIgnoreCase(optType)) {
+                    optSql = OracleParser.jsonToUpdateSql(filedList, primarykeyList, optTable);
+                } else if (OracleAttr.INSERT.equalsIgnoreCase(optType)) {
+                    optSql = OracleParser.jsonToInsertSql(filedList, optTable);
+                } else if (OracleAttr.DELETE.equalsIgnoreCase(optType)) {
+                    optSql = OracleParser.jsonToDeleteSql(primarykeyList, optTable);
+                } else if (OracleAttr.UPDATEPK.equalsIgnoreCase(optType)) {
+                    //todo 更新PK
+                    log.error("Ucaccepted operation: update PK\n" + opt.toJSONString());
+                    continue;
+                } else {
+                    log.error("Unaccepted operation:\n" + opt.toJSONString());
+                    continue;
+                }
+
+                JSONObject optSqlJson = new JSONObject();
+                optSqlJson.put("opt", optType);
+                optSqlJson.put("table", optTable);
+                optSqlJson.put("sql", optSql);
+                this.queue.add(optSqlJson);
+            } catch (Exception e) {
+                log.error("Parse to SQL ERROR : getMessage - " + opt.toJSONString() + "\n" + e.getMessage());
+                log.error("Parse to SQL ERROR : getLocalMessage - " + e.getLocalizedMessage());
             }
 
-            JSONObject optSqlJson = new JSONObject();
-            optSqlJson.put("opt", optType);
-            optSqlJson.put("table", optTable);
-            optSqlJson.put("sql", optSql);
-            this.queue.add(optSqlJson);
         }
 
     }
