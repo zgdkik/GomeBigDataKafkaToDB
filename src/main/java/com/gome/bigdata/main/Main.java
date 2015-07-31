@@ -12,6 +12,8 @@ public class Main {
     private static Logger log = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) {
+        log.info("---------START-----");
+
         //TODO 写死在程序中的配置文件，log4j
         PropertyConfigurator.configure(PropertiesUtil.getInstance().getProperty("log4j.properties"));
         //检查启动参数
@@ -25,11 +27,12 @@ public class Main {
         String group = args[2];
         String topic = args[3];
         int numThread = Integer.valueOf(args[4]);
-
+        log.info("2222222222222222222222");
         OracleEntry oracleEntry = new OracleEntry();
         ShutdownHook shutdownHook = new ShutdownHook(oracleEntry);
 
 
+        log.info("33333333333333333333333");
         oracleEntry.initConfig();
         oracleEntry.startOracleEntry();
         oracleEntry.startKafkaConsumer(offsetReset, zkQuorum, group, topic, numThread);
