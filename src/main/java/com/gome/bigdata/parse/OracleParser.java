@@ -212,11 +212,12 @@ public class OracleParser {
                 List listFiled = new ArrayList();
                 listFiled.add(i);
                 listFiled.add(new StringBuffer("\"").append(key.toUpperCase()).append("\"").toString());
-                if (StringUtils.isEmpty(value) || value.equals("null")) {
-                    listFiled.add(null);
-                } else {
-                    listFiled.add(value);
-                }
+//                if (StringUtils.isEmpty(value) || value.equals("null")) {
+//                    listFiled.add(null);
+//                } else {
+//                    listFiled.add(value);
+//                }
+                listFiled.add(value);
                 list.add(listFiled);
                 i++;
             }
@@ -231,8 +232,8 @@ public class OracleParser {
         int i = 1;
         for (String key : primarykeyArray) {
             List listPrimarykey = new ArrayList();
-            String value = null;
-            if (opeate.equals("UPDATE_FIELDCOMP_PK")) {
+            String value;
+            if (opeate.equals(OracleAttr.UPDATEPK)) {
                 value = jsonObjectFiledValue.get(key + "_BEFORE").toString();
             } else {
 //                log.info(jsonObjectFiledValue.toJSONString());
@@ -307,7 +308,7 @@ public class OracleParser {
      * @param tableName
      * @return update sql
      */
-    public static String jsonToUpdateSql(List<List> filedList, List<List> primarykeyList, String tableName) {
+    public static String jsonToUpdateOrUpdatePkSql(List<List> filedList, List<List> primarykeyList, String tableName) {
 
         String sql = "";
         String filedPart = "";

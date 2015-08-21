@@ -1,7 +1,6 @@
 package com.gome.bigdata.process;
 
 import com.alibaba.fastjson.JSONObject;
-import com.gome.bigdata.attr.ConfAttr;
 import com.gome.bigdata.attr.OracleAttr;
 import com.gome.bigdata.main.OracleEntry;
 import com.gome.bigdata.parse.OracleParser;
@@ -11,7 +10,6 @@ import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.MessageAndMetadata;
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import java.util.*;
@@ -117,15 +115,15 @@ public class KafkaConsumer {
                 List<List> filedList = OracleParser.getFiledListHaveFilter(optFiledValue, optTable);
                 List<List> primarykeyList = OracleParser.getPrimaryKeyListHaveFilter(optFiledValue, optPK, optType, optTable);
                 if (OracleAttr.UPDATE.equalsIgnoreCase(optType)) {
-                    optSql = OracleParser.jsonToUpdateSql(filedList, primarykeyList, optTable);
+                    optSql = OracleParser.jsonToUpdateOrUpdatePkSql(filedList, primarykeyList, optTable);
                 } else if (OracleAttr.INSERT.equalsIgnoreCase(optType)) {
                     optSql = OracleParser.jsonToInsertSql(filedList, optTable);
                 } else if (OracleAttr.DELETE.equalsIgnoreCase(optType)) {
                     optSql = OracleParser.jsonToDeleteSql(primarykeyList, optTable);
                 } else if (OracleAttr.UPDATEPK.equalsIgnoreCase(optType)) {
                     //todo 更新PK
-                    log.error("Ucaccepted operation: update PK\n" + opt.toJSONString());
-                    continue;
+                    log.warn("Update PK\n" + opt.toJSONString());
+                    optSql = OracleParser.jsonToUpdateOrUpdatePkSql(filedList, primarykeyList, optTable);
                 } else {
                     log.error("Unaccepted operation:\n" + opt.toJSONString());
                     continue;
@@ -138,7 +136,6 @@ public class KafkaConsumer {
                 this.queue.add(optSqlJson);
             } catch (Exception e) {
                 log.error("Parse to SQL ERROR : getMessage - " + opt.toJSONString() + "\n" + e.getMessage());
-                log.error("Parse to SQL ERROR : getLocalMessage - " + e.getLocalizedMessage());
             }
 
         }
