@@ -88,7 +88,7 @@ public class KafkaConsumer {
     private void parseOpt(String batchOpt) {
         ArrayList<JSONObject> optLists = OracleParser.parseOperations(batchOpt);
         OracleEntry.incrReceivedFromKafkaOptCount(optLists.size());
-        log.info("Received count: " + OracleEntry.getReceivedFromKafkaOptCount());
+//        log.info("Received count: " + OracleEntry.getReceivedFromKafkaOptCount());
 
 
         while (this.queue.remainingCapacity() <= optLists.size()) {
