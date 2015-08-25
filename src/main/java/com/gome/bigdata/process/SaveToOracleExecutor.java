@@ -56,6 +56,7 @@ public class SaveToOracleExecutor implements Runnable {
                 } else {
                     try {
                         sql = queue.take().getString("sql");
+                        preSqlList.add(sql);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         log.error("Taking out sql error: " + e.getMessage());
@@ -70,7 +71,7 @@ public class SaveToOracleExecutor implements Runnable {
                         continue;
                     }
 
-                    preSqlList.add(sql);
+//                    preSqlList.add(sql);
                     if (preSqlList.size() >= OracleAttr.ORACLE_BATCH_NUM) {
                         try {
                             conn.commit();
@@ -130,8 +131,8 @@ public class SaveToOracleExecutor implements Runnable {
             conn.setAutoCommit(false);
             Statement stmt = conn.createStatement();
             log.info(stmt.getClass());
-//            stmt.execute(sql);
-            stmt.executeUpdate(sql);
+            stmt.execute(sql);
+//            stmt.executeUpdate(sql);
             conn.commit();
             conn.close();
             OracleEntry.incrSaveToOracleSuccessCount(1);
