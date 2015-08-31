@@ -335,6 +335,7 @@ public class OracleParser {
             }
         }
         sql = "UPDATE " + tableName + " SET " + filedPart + " WHERE " + primaryKeyPart;
+//        log.info("DEBUG UPDATE SQL: " + sql);
         return sql;
     }
 
@@ -362,6 +363,7 @@ public class OracleParser {
             }
         }
         sql = "INSERT INTO " + tableName + filedPart + " VALUES" + valePart;
+//        log.info("DEBUG INSERT SQL: " + sql);
         return sql;
     }
 
@@ -386,6 +388,7 @@ public class OracleParser {
         }
 
         sql = " DELETE FROM " + table + " WHERE " + primaryKeyPart;
+//        log.info("DEBUG DELETE SQL: " + sql);
         return sql;
     }
 }
