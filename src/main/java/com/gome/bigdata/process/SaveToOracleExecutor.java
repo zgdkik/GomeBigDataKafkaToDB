@@ -126,8 +126,9 @@ public class SaveToOracleExecutor implements Runnable {
      */
     private void singleCommit(String sql) {
         log.info("Single commit! - " + sql);
+        Connection conn = null;
         try {
-            Connection conn = C3P0Factory.getConnection();
+            conn = C3P0Factory.getConnection();
             conn.setAutoCommit(false);
             Statement stmt = conn.createStatement();
             log.info(stmt.getClass());
@@ -140,6 +141,14 @@ public class SaveToOracleExecutor implements Runnable {
             log.error("Single commit ERROR! - " + sql);
             OracleEntry.incrSaveToOracleFailureCount(1);
             log.error("EXECUTE ERROR SQL: " + sql + "\n" + e.getMessage());
+        } finally {
+            if(null != conn){
+                try {
+                    conn.close();
+                } catch (SQLException e1) {
+                    log.error("CONN close ERROR");
+                }
+            }
         }
     }
 
