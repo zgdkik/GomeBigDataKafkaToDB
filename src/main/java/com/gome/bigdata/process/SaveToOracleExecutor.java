@@ -30,17 +30,20 @@ public class SaveToOracleExecutor implements Runnable {
         this.queue = queue;
     }
 
+    // 只能单线程处理，如果多线程这里的全局变量可能有问题
+    private Connection conn = null;
+    private Statement stmt = null;
 
     List<String> preSqlList = new ArrayList<String>();
 
     @Override
     public void run() {
-        Connection conn = null;
+         conn = null;
         String sql = "";
         try {
             conn = C3P0Factory.getConnection();
             conn.setAutoCommit(false);
-            Statement stmt = conn.createStatement();
+            stmt = conn.createStatement();
 
             while (run.get()) {
 
@@ -111,6 +114,11 @@ public class SaveToOracleExecutor implements Runnable {
         run.set(false);
 
         log.info("-----Batch sql list-----" + preSqlList.size());
+        try {
+            conn.close();
+        } catch (SQLException e) {
+            log.error("Shutdown hook close conn ERROR", e);
+        }
         for (int i = 0; i < preSqlList.size(); i++) {
             log.info("single sql: " + i + " - " + preSqlList.get(i));
             singleCommit(preSqlList.get(i));
