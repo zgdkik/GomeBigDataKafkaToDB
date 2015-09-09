@@ -64,14 +64,13 @@ public class SaveToOracleExecutor implements Runnable {
                     try {
                         stmt.execute(sql);
                     } catch (SQLException e) {
-                        log.error("Oracle ERROR! ERROR SQL: " + sql + "\n" + e.getMessage());
+                        log.warn("Patch execute SQL error: " + sql + "\n" + e.getMessage());
                         conn.close();
                         conn = null;
                         remedyCommit();
                         continue;
                     }
 
-//                    preSqlList.add(sql);
                     if (preSqlList.size() >= OracleAttr.ORACLE_BATCH_NUM) {
                         try {
                             conn.commit();
@@ -88,14 +87,14 @@ public class SaveToOracleExecutor implements Runnable {
                 }
             }
         } catch (SQLException e) {
-            log.error("EXECUTE SQL ERROR: " + e.getMessage());
+            log.error("EXECUTE RUN SQL ERROR: " + e.getMessage(), e);
         } finally {
             if (conn != null) {
                 try {
                     conn.close();
                     log.info("main connection closed...");
                 } catch (SQLException e) {
-                    log.error("Finally close connection!");
+                    log.error("Finally close connection!", e);
                     e.printStackTrace();
                 }
             }
@@ -129,24 +128,32 @@ public class SaveToOracleExecutor implements Runnable {
         Connection conn = null;
         try {
             conn = C3P0Factory.getConnection();
+            log.info("11111111111111111111111");
             conn.setAutoCommit(false);
+            log.info("2222222222222222222222222222");
             Statement stmt = conn.createStatement();
+            log.info("3333333333333333333333333333333");
             log.info(stmt.getClass());
+            log.info("44444444444444444444444444");
             stmt.execute(sql);
+            log.info("555555555555555");
 //            stmt.executeUpdate(sql);
             conn.commit();
-            conn.close();
+            log.info("6666666666666666666666666");
+//            conn.close();
             OracleEntry.incrSaveToOracleSuccessCount(1);
+            log.info("77777777777777777777777777");
         } catch (SQLException e) {
-            log.error("Single commit ERROR! - " + sql);
+            log.error("Single commit ERROR! - " + sql + "\n" + e.getMessage(), e);
             OracleEntry.incrSaveToOracleFailureCount(1);
-            log.error("EXECUTE ERROR SQL: " + sql + "\n" + e.getMessage());
         } finally {
-            if(null != conn){
+            if (null != conn) {
                 try {
+                    log.info("888888888888888888888888888888");
                     conn.close();
+                    log.info("9999999999999999999999999999");
                 } catch (SQLException e1) {
-                    log.error("CONN close ERROR");
+                    log.error("Single commit CONN close ERROR", e1);
                 }
             }
         }

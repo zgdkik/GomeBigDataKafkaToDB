@@ -135,7 +135,7 @@ public class KafkaConsumer {
                 optSqlJson.put("sql", optSql);
                 this.queue.add(optSqlJson);
             } catch (Exception e) {
-                log.error("Parse to SQL ERROR : getMessage - " + opt.toJSONString() + "\n" + e.getMessage());
+                log.error("Parse to SQL ERROR : getMessage - " + opt.toJSONString() + "\n" + e.getMessage(), e);
             }
 
         }
