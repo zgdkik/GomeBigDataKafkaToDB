@@ -101,8 +101,7 @@ public class KafkaConsumer {
 
         for (JSONObject opt : optLists) {
             String optType = opt.getString(OracleAttr.PERATEIONTYPE);
-
-            String optSql = null;
+            String optSql;
             String optOwner = opt.getString(OracleAttr.OWNER);
             if (OracleAttr.CHANGE_OWNER != null) {
                 optOwner = OracleAttr.CHANGE_OWNER;
