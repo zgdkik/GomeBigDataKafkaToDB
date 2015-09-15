@@ -2,6 +2,7 @@
 .idea/
 target/
 test/
+test/java/
 logs/
 *.log
 .svn/
